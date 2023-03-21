@@ -1,0 +1,289 @@
+---
+title: "Final Project Dashboard"
+output: 
+  flexdashboard::flex_dashboard
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+options(scipen=999)
+library(haven)
+library(Hmisc)
+library(ggplot2)
+library(dplyr)
+library(viridis)
+library(outliers)
+library(EnvStats)
+library(datarium)
+library(car)
+library(graphics)
+library(tidyverse)
+library(flexdashboard)
+library(dplyr)
+library(ggplot2)
+library(tidyverse)
+library(viridis)
+library(RColorBrewer)
+library(tidyverse)
+library(ggeffects)
+library(ggforce)
+library(ggiraphExtra)
+library(ggiraph)
+library(htmlwidgets)
+library(tidyr)
+library(sjPlot)
+library(sjmisc)
+library(emmeans)
+library(plotly)
+library(gapminder)
+theme_set(theme_sjplot())
+```
+
+```{r, include=FALSE}
+d <- read_sav("~/Documents/PhD/2022-2023/Coursework/Winter 2023/EDLD 652/Final Project/final_project_draft/data/ACE_TEI_Health_Study_1.sav")
+
+d$sex <- as.factor(d$sex)
+
+summary(d)
+
+# plot b
+
+ACE_TEI_plot <- d %>%
+  ggplot(aes(ACE, TEI)) +
+  geom_point(aes(color = sex)) +
+  scale_color_manual(name = "Sex", labels = c("Female", "Male"), values = c("#F05039", "#7CA1CC")) +
+  geom_smooth(method = "lm", se = FALSE, col = "black") +
+  labs(x = "Adverse Childhood Experiences (ACEs)", y = "Trait Emotional Intelligence (TEI)",
+       title = "Association Between Exposure to ACEs and Trait Emotional Intelligence Among a Sample of Adults",
+       subtitle = "As exposure to ACEs increases, TEI decreases",
+       caption = "Sex is not significantly related to ACEs or TEI") +
+  theme_minimal()
+
+ACE_Health_plot <- d %>%
+  ggplot(aes(ACE, Health)) +
+  geom_point(aes(color = sex)) +
+  scale_color_manual(name = "Sex", labels = c("Female", "Male"), values = c("#F05039", "#7CA1CC")) +
+  geom_smooth(method = "lm", se = FALSE, col = "black") +
+  labs(x = "Adverse Childhood Experiences (ACEs)", y = "Self-Reported Health",
+       title = "Association Between Exposure to ACEs and Self-Reported Health Among a Sample of Adults",
+       subtitle = "As exposure to ACEs increases, health decreases") + 
+  theme_minimal()
+
+
+# new dataframe with new labels for facet 
+library(dplyr)
+library(tidyverse)
+
+dfa <- d
+levels(dfa$sex)[levels(dfa$sex) == "1"] <- "Women"
+levels(dfa$sex)[levels(dfa$sex) == "2"] <- "Men"
+
+# plot b
+
+ACE_TEI_plot <- dfa %>%
+  ggplot(aes(ACE, TEI)) +
+  geom_point(position = "jitter") +
+  geom_smooth(method = "lm", se = FALSE, col = "#F05039") +
+  labs(x = "ACEs", y = "TEI",
+       title = "Association Between Exposure to Adverse Childhood Experiences \n(ACEs) and Trait Emotional Intelligence (TEI) Among a Sample of \nAdults",
+       subtitle = "As exposure to ACEs increases, TEI decreases similarly for both women \n(left) and men (right).",
+       caption = "Source: https://zenodo.org/record/6993478#.Y9xDpuzMKko") +
+  theme_minimal()
+
+ACE_TEI_plot2 <- ACE_TEI_plot + scale_x_continuous(breaks=seq(0,9,by=1))
+
+
+# plot c
+
+###hrbrthemes::import_roboto_condensed() 
+
+# change ses to groups
+
+d$SES <- as.factor(d$SES)
+
+dfa2 <- d
+levels(dfa2$SES)[levels(dfa2$SES) == "1"] <- "Low SES"
+levels(dfa2$SES)[levels(dfa2$SES) == "2"] <- "Low SES"
+levels(dfa2$SES)[levels(dfa2$SES) == "3"] <- "Low SES"
+levels(dfa2$SES)[levels(dfa2$SES) == "4"] <- "Medium SES"
+levels(dfa2$SES)[levels(dfa2$SES) == "5"] <- "Medium SES"
+levels(dfa2$SES)[levels(dfa2$SES) == "6"] <- "High SES"
+levels(dfa2$SES)[levels(dfa2$SES) == "7"] <- "High SES"
+levels(dfa2$SES)[levels(dfa2$SES) == "8"] <- "High SES"
+levels(dfa2$SES)[levels(dfa2$SES) == "9"] <- "High SES"
+levels(dfa2$SES)[levels(dfa2$SES) == "10"] <- "High SES"
+
+library(hrbrthemes)
+
+# plot c
+
+dp <- ggplot(data=dfa2, aes(x=TEI, group=SES, fill=SES)) +
+    geom_density(adjust=1.5, position="fill") +
+  scale_fill_manual(name = "SES", labels = c("Low", "Medium", "High"), values = c("#1A85FF", "#D41159", "#FFC20A")) +
+  labs(x = "TEI", y = "Proportion",
+       title = "Trait Emotional Intelligence (TEI) is positively \nassociated with socioeconomic status (SES)",
+       subtitle = "As SES increases, TEI tends to increase as well.",
+       caption = "Source: https://zenodo.org/record/6993478#.Y9xDpuzMKko") +
+    theme_ipsum() 
+
+
+# interaction for plot a
+
+int <- lm(Health ~ ACE*TEI, data = d)
+summary(int)
+
+# creating +1 SD, mean, and -1 SD for TEI
+
+TEI_a <- mean(d$TEI) + sd(d$TEI)
+TEI_mean <- mean(d$TEI)
+TEI_b <- mean(d$TEI) - sd(d$TEI)
+
+# round to tens
+
+(TEI_ar <- round(TEI_a, 1))
+(TEI_meanr <- round(TEI_mean, 1))
+(TEI_br <- round(TEI_b, 1))
+
+mylist <- list(TEI = c(TEI_br, TEI_meanr, TEI_ar))
+emtrends(int, ~TEI, var = "ACE", at = mylist)
+
+# all are significant!
+
+(mylist <- list(ACE = seq(0, 9, by = 1), TEI = c(TEI_br, TEI_meanr, TEI_ar)))
+
+# ggplot prep
+
+(mylist <- list(ACE = seq(0, 9, by = 1), TEI = c(TEI_br, TEI_meanr, TEI_ar)))
+int2 <- emmip(int, TEI~ACE, at = mylist, CIs = TRUE, plotit = FALSE)
+summary(int2)
+
+int2$FTEI <- factor(int2$TEI)
+levels(int2$FTEI) <- c("low", "med", "high")
+
+color_palette <- c("low" = "#1A85FF", "med" = "#D41159", "high" = "#FFC20A")
+
+library(ggplot2)
+
+p <- ggplot(data = int2, aes(x = ACE, y = yvar, color = FTEI)) +
+  geom_line() 
+
+p
+
+pc <- p + scale_color_manual(values = color_palette)
+pc
+
+p1 <- pc + geom_ribbon(aes(ymax = UCL, ymin = LCL, fill = FTEI), alpha = 0.4)
+pa <- p1 + scale_fill_manual(values = color_palette)
+pa
+
+p2 <- pa + labs(x = "ACEs", y = "Health", color = "TEI", fill = "TEI",
+          title = "Interaction Between Exposure to Adverse Childhood \nExperiences (ACEs) and Trait Emotional Intelligence (TEI) \nPredicting Self-Reported Health Among a Sample of Adults",
+          subtitle = "Trait emotional intelligence serves as a protective factor against the \nnegative influences of ACEs on health, though exposure to greater numbers of \nACEs is still associated with poorer health.",
+          caption = "Source: https://zenodo.org/record/6993478#.Y9xDpuzMKko")
+p2
+
+p4 <- p2 + scale_x_continuous(breaks=seq(0,9,by=1)) +
+  scale_y_continuous(breaks=seq(0, 10, by=1))
+
+# previous versions chart a
+
+int_plot <- ggPredict(int)
+
+# previous chart b
+
+ACE_TEI_plot_p <- d %>%
+  ggplot(aes(ACE, TEI)) +
+  geom_point(aes(color = sex)) +
+  scale_color_manual(name = "Sex", labels = c("Female", "Male"), values = c("#F05039", "#7CA1CC")) +
+  geom_smooth(method = "lm", se = FALSE, col = "black") +
+  labs(x = "Adverse Childhood Experiences (ACEs)", y = "Trait Emotional Intelligence (TEI)",
+       title = "Association Between Exposure to ACEs and Trait Emotional Intelligence Among a Sample of Adults",
+       subtitle = "As exposure to ACEs increases, TEI decreases",
+       caption = "Sex is not significantly related to ACEs or TEI") +
+  theme_minimal()
+
+# previous chart c
+
+ACE_Health_plot <- d %>%
+  ggplot(aes(ACE, Health)) +
+  geom_point(aes(color = sex)) +
+  scale_color_manual(name = "Sex", labels = c("Female", "Male"), values = c("#F05039", "#7CA1CC")) +
+  geom_smooth(method = "lm", se = FALSE, col = "black") +
+  labs(x = "Adverse Childhood Experiences (ACEs)", y = "Self-Reported Health",
+       title = "Association Between Exposure to ACEs and Self-Reported Health Among a Sample of Adults",
+       subtitle = "As exposure to ACEs increases, health decreases") + 
+  theme_minimal()
+
+```
+
+Sidebar {.sidebar}
+================================================
+This is my final project for EDLD 652. This dataset comes from Alison Bacon (Link: https://zenodo.org/record/6993478#.Y9xDpuzMKko). These visualizations show the relationship between exposure to adverse childhood experiences (ACEs), trait emotional intelligence (TEI), self-reported health, and socioeconomic status (SES) among a sample of adults. TEI serves as a protective factor against ACEs on self-reported health. However, as exposure to ACEs gets really high, the protective influences of TEI on self-reported health is reduced. Higher SES is also associated with higher TEI. These findings provide more evidence for the need to prevent and reduce exposure to ACEs and increase income equality. Future research might investigate whether interventions that increase emotional intelligence improves self-reported health for individuals exposed to greater numbers of ACEs. Previous versions of each plot are shown in the different pages. Plots evolved to be clearer in communicating the above message, to be color-blind friendly, and to diversify my portfolio from mainly scatterplots to a regression plot and a density plot as well.
+
+Page 1
+===================================================================
+
+### Chart A
+
+```{r}
+p4 + theme_minimal()
+```
+
+
+Page 2
+====================================================================
+
+### Chart B
+
+```{r}
+ACE_TEI_plot2 + facet_wrap(~sex)
+```
+
+
+Page 3
+====================================================================
+
+### Chart C
+
+```{r}
+dp
+```
+
+
+Page 4
+====================================================================
+
+### Chart A Previous Version 1
+
+```{r}
+plot_model(int, type = "pred", terms = c("ACE", "TEI"))
+```
+
+
+Page 5
+====================================================================
+
+### Chart A Previous Version 2
+
+```{r}
+int_plot
+```
+
+Page 6
+====================================================================
+
+### Chart B Previous Version 
+
+```{r}
+ACE_TEI_plot_p + scale_x_continuous(breaks=seq(0,9,by=1))
+```
+
+Page 7
+====================================================================
+
+### Chart C Previous Version 
+
+```{r}
+ACE_Health_plot + scale_x_continuous(breaks=seq(0,9,by=1))
+```
+
